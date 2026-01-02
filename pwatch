@@ -48,7 +48,7 @@ else
     DURATION=$((END_TIME - START_TIME))
     
     echo "----------------------------------------"
-    echo "🏁 Command finished with exit code: $EXIT_CODE"
+    echo "Command finished with exit code: $EXIT_CODE"
     
     # 构建通知内容
     if [ $EXIT_CODE -eq 0 ]; then

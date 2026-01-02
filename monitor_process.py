@@ -9,9 +9,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def send_bark_notification(key, title, body):
-    url = f"https://api.day.app/{key}/{title}/{body}"
+    url = f"https://api.day.app/{key}"
+    payload = {
+        "title": title,
+        "body": body
+    }
     try:
-        response = requests.get(url)
+        response = requests.post(url, json=payload)
         response.raise_for_status()
         print(f"Notification sent successfully. Response: {response.text}")
     except Exception as e:
@@ -63,7 +67,9 @@ if __name__ == "__main__":
         sys.exit(1)
     
     if args.notify_only:
-        send_bark_notification(args.key, args.title, args.body)
+        # Support \n escape sequence in body argument
+        body = args.body.replace('\\n', '\n')
+        send_bark_notification(args.key, args.title, body)
     elif args.pid:
         monitor_process(args.pid, args.key)
     else:
