@@ -1,0 +1,67 @@
+#!/bin/bash
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+PYTHON_SCRIPT="$SCRIPT_DIR/monitor_process.py"
+
+# 检查参数
+if [ -z "$1" ]; then
+    echo "Usage:"
+    echo "  pwatch <pid>               Monitor an existing process ID in background"
+    echo "  pwatch <command> [args]    Run a command and notify when finished"
+    exit 1
+fi
+
+# 检查第一个参数是否为 PID (纯数字)
+if [[ "$1" =~ ^[0-9]+$ ]]; then
+    # === 模式 1: 监控现有 PID ===
+    PID=$1
+    
+    # 检查 PID 是否存在
+    if ! ps -p $PID > /dev/null; then
+        echo "Error: Process $PID does not exist."
+        exit 1
+    fi
+
+    # 后台启动 Python 监控脚本
+    # 使用 nohup 忽略挂起信号，重定向输出到 /dev/null
+    nohup python3 "$PYTHON_SCRIPT" "$PID" > /dev/null 2>&1 &
+    
+    echo "✅ Monitoring process $PID in the background."
+    echo "   You will receive a notification when it ends."
+
+else
+    # === 模式 2: 运行新命令并通知 ===
+    CMD="$@"
+    
+    echo "🚀 Running command: $CMD"
+    echo "----------------------------------------"
+    
+    # 记录开始时间
+    START_TIME=$(date +%s)
+    
+    # 执行命令
+    "$@"
+    EXIT_CODE=$?
+    
+    # 计算耗时
+    END_TIME=$(date +%s)
+    DURATION=$((END_TIME - START_TIME))
+    
+    echo "----------------------------------------"
+    echo "🏁 Command finished with exit code: $EXIT_CODE"
+    
+    # 构建通知内容
+    if [ $EXIT_CODE -eq 0 ]; then
+        STATUS="Success"
+        ICON="✅"
+    else
+        STATUS="Failed"
+        ICON="❌"
+    fi
+    
+    TITLE="$ICON Command Finished: $1"
+    BODY="Command: $CMD\nStatus: $STATUS (Code: $EXIT_CODE)\nDuration: ${DURATION}s"
+    
+    # 发送通知
+    python3 "$PYTHON_SCRIPT" --notify-only --title "$TITLE" --body "$BODY"
+fi
